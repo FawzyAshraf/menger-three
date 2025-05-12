@@ -9,6 +9,11 @@ const camera = new THREE.PerspectiveCamera(
   1000,
 );
 
+function unionAll(...meshes: THREE.Mesh[]) {
+  const [first, ...rest] = meshes;
+  return rest.reduce((mesh, total) => CSG.union(mesh, total), first);
+}
+
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -21,12 +26,38 @@ const face1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1 / 3, 1 / 3));
 const face2 = new THREE.Mesh(new THREE.BoxGeometry(1 / 3, 1, 1 / 3));
 const face3 = new THREE.Mesh(new THREE.BoxGeometry(1 / 3, 1 / 3, 1));
 
-const res = CSG.subtract(cube, CSG.union(CSG.union(face1, face2), face3));
+const N1 = [] as THREE.Mesh[];
+
+for (let i = 0; i < 3; ++i) {
+  const p = [1 / 3, 0, -1 / 3];
+  for (let j = 0; j < 3; ++j) {
+    if (i == j && p[i] == 0) {
+      continue;
+    }
+    N1.push(
+      new THREE.Mesh(
+        new THREE.BoxGeometry(1 / 9, 1 / 9, 1).translate(p[i], p[j], 0),
+      ),
+    );
+    N1.push(
+      new THREE.Mesh(
+        new THREE.BoxGeometry(1 / 9, 1, 1 / 9).translate(p[i], 0, p[j]),
+      ),
+    );
+    N1.push(
+      new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1 / 9, 1 / 9).translate(0, p[i], p[j]),
+      ),
+    );
+  }
+}
+
+const res = CSG.subtract(cube, unionAll(face1, face2, face3, ...N1));
 
 scene.add(res);
 
 camera.position.z = 3;
-res.rotation.x = 10;
+//res.rotation.x = 10;
 
 function animate() {
   res.rotation.y += 0.01;
